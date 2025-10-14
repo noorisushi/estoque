@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Estoque - Sushi</title>
+    <style>
+        /* Estilos Gerais */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Navegação por Abas */
+        .nav-tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: #555;
+        }
+        .nav-tab.active {
+            border-bottom: 3px solid #007bff;
+            color: #007bff;
+        }
+
+        /* Conteúdo das Abas */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Botões e Formulários */
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-add, .btn-remove {
+            background-color: #28a745;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 18px;
+            padding: 0;
+            line-height: 30px;
+            text-align: center;
+        }
+        .btn-remove {
+            background-color: #dc3545;
+        }
+
+        .add-form {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .add-form.show {
+            display: flex;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* Listas / Tabelas */
+        .item-list {
+            list-style: none;
+            padding: 0;
+        }
+        .item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 150px;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .item-header {
+            font-weight: bold;
+            border-bottom: 2px solid #ccc;
+        }
+        .item-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+        .item-quantity {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        /* Sessão de Itens em Falta */
+        .out-of-stock {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fff3f3;
+            border: 1px solid #ffcccc;
+            border-radius: 5px;
+        }
+        .out-of-stock h3 {
+            color: #d9534f;
+            margin-top: 0;
+        }
+        .out-of-stock-list {
+            list-style: disc;
+            padding-left: 20px;
+            color: #d9534f;
+        }
+
+        /* Checklist */
+        .checklist-item {
+             display: flex;
+             justify-content: space-between;
+             padding: 12px 5px;
+             border-bottom: 1px solid #eee;
+        }
+        .checklist-item label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🍣 Controle de Estoque Sushi</h1>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('estoque')">Estoque</button>
+            <button class="nav-tab" onclick="showTab('producao')">Produção</button>
+            <button class="nav-tab" onclick="showTab('checklist')">Checklist Diário</button>
+        </div>
+
+        <div id="estoque" class="tab-content active">
+            <h2>Estoque de Insumos</h2>
+            <button onclick="toggleForm('form-estoque')">Adicionar Novo Produto</button>
+            
+            <div id="form-estoque" class="add-form">
+                <input type="text" id="nome-estoque" placeholder="Nome do Produto">
+                <select id="categoria-estoque">
+                    <option value="Peixe">Peixe</option>
+                    <option value="Tempero">Tempero</option>
+                    <option value="Legume">Legume</option>
+                    <option value="Fruta">Fruta</option>
+                    <option value="Molho">Molho (Insumo)</option>
+                    <option value="Embalagem">Embalagem</option>
+                    <option value="Outro">Outro</option>
+                </select>
+                <input type="number" id="qtd-estoque" placeholder="Quantidade Inicial">
+                <button onclick="addItem('estoque')">Salvar Produto</button>
+            </div>
+
+            <div class="item-list">
+                <div class="item item-header">
+                    <span>Produto</span>
+                    <span>Categoria</span>
+                    <span>Quantidade</span>
+                    <span>Ações</span>
+                </div>
+                <div id="lista-estoque"></div>
+            </div>
+
+            <div id="container-falta-estoque" class="out-of-stock" style="display: none;">
+                <h3>🚨 Itens em Falta no Estoque!</h3>
+                <ul id="falta-estoque" class="out-of-stock-list"></ul>
+            </div>
+        </div>
+
+        <div id="producao" class="tab-content">
+            <h2>Itens de Produção</h2>
+            <button onclick="toggleForm('form-producao')">Adicionar Item de Produção</button>
+
+             <div id="form-producao" class="add-form">
+                <input type="text" id="nome-producao" placeholder="Nome do Item (Ex: Molho Teriyaki)">
+                <input type="number" id="qtd-producao" placeholder="Quantidade Inicial">
+                <button onclick="addItem('producao')">Salvar Item</button>
+            </div>
+            
+            <div class="item-list">
+                 <div class="item item-header">
+                    <span>Item Produzido</span>
+                    <span style="grid-column: span 2;">Quantidade</span> <span>Ações</span>
+                </div>
+                <div id="lista-producao"></div>
+            </div>
+
+            <div id="container-precisa-produzir" class="out-of-stock" style="display: none;">
+                <h3>🔥 Precisa Produzir!</h3>
+                <ul id="precisa-produzir" class="out-of-stock-list"></ul>
+            </div>
+        </div>
+
+        <div id="checklist" class="tab-content">
+            <h2>Checklist Diário</h2>
+            <p>Verifique todos os itens do estoque e da produção para o dia.</p>
+            <div id="lista-checklist"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- ESTRUTURA DE DADOS ---
+        // Usaremos arrays para guardar nossos objetos.
+        let estoque = [];
+        let producao = [];
+
+        // --- FUNÇÕES PRINCIPAIS ---
+
+        // Função para mostrar a aba correta
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (tabName === 'checklist') {
+                renderChecklist();
+            }
+        }
+
+        // Função para mostrar/esconder o formulário de adição
+        function toggleForm(formId) {
+            document.getElementById(formId).classList.toggle('show');
+        }
+
+        // Função para adicionar um item (serve para estoque e produção)
+        function addItem(type) {
+            if (type === 'estoque') {
+                const nome = document.getElementById('nome-estoque').value;
+                const categoria = document.getElementById('categoria-estoque').value;
+                const quantidade = parseInt(document.getElementById('qtd-estoque').value) || 0;
+
+                if (nome.trim() === '') {
+                    alert('Por favor, preencha o nome do produto.');
+                    return;
+                }
+                
+                estoque.push({ id: Date.now(), nome, categoria, quantidade });
+                renderEstoque();
+                
+                // Limpa e esconde o formulário
+                document.getElementById('nome-estoque').value = '';
+                document.getElementById('qtd-estoque').value = '';
+                toggleForm('form-estoque');
+
+            } else { // produção
+                const nome = document.getElementById('nome-producao').value;
+                const quantidade = parseInt(document.getElementById('qtd-producao').value) || 0;
+                
+                if (nome.trim() === '') {
+                    alert('Por favor, preencha o nome do item.');
+                    return;
+                }
+
+                producao.push({ id: Date.now(), nome, quantidade });
+                renderProducao();
+
+                // Limpa e esconde o formulário
+                document.getElementById('nome-producao').value = '';
+                document.getElementById('qtd-producao').value = '';
+                toggleForm('form-producao');
+            }
+            saveData();
+        }
+        
+        // Função para mudar a quantidade de um item
+        function updateQuantity(type, id, amount) {
+            const list = type === 'estoque' ? estoque : producao;
+            const item = list.find(i => i.id === id);
+            
+            if (item) {
+                item.quantidade += amount;
+                if (item.quantidade < 0) {
+                    item.quantidade = 0; // Não permite quantidade negativa
+                }
+            }
+
+            if (type === 'estoque') {
+                renderEstoque();
+            } else {
+                renderProducao();
+            }
+            saveData();
+        }
+
+        // Função para remover um item permanentemente
+        function deleteItem(type, id) {
+            if (!confirm('Tem certeza que deseja apagar este item permanentemente?')) {
+                return;
+            }
+
+            if (type === 'estoque') {
+                estoque = estoque.filter(i => i.id !== id);
+                renderEstoque();
+            } else {
+                producao = producao.filter(i => i.id !== id);
+                renderProducao();
+            }
+            saveData();
+        }
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO (DESENHAR NA TELA) ---
+
+        function renderEstoque() {
+            const listaEstoqueEl = document.getElementById('lista-estoque');
+            const faltaEstoqueEl = document.getElementById('falta-estoque');
+            const containerFaltaEstoque = document.getElementById('container-falta-estoque');
+            
+            listaEstoqueEl.innerHTML = '';
+            faltaEstoqueEl.innerHTML = '';
+            let itensEmFalta = 0;
+
+            estoque.forEach(item => {
+                // Adiciona na lista principal
+                const itemEl = document.createElement('div');
+                itemEl.className = 'item';
+                itemEl.innerHTML = `
+                    <span>${item.nome}</span>
+                    <span>${item.categoria}</span>
+                    <span class="item-quantity">${item.quantidade}</span>
+                    <div class="item-controls">
+                        <button class="btn-add" onclick="updateQuantity('estoque', ${item.id}, 1)">+</button>
+                        <button class="btn-remove" onclick="updateQuantity('estoque', ${item.id}, -1)">-</button>
+                        <button class="btn-remove" style="background-color: #888;" onclick="deleteItem('estoque', ${item.id})">x</button>
+                    </div>
+                `;
+                listaEstoqueEl.appendChild(itemEl);
+
+                // Adiciona na lista de "em falta" se a quantidade for 0
+                if (item.quantidade === 0) {
+                    const faltaItemEl = document.createElement('li');
+                    faltaItemEl.textContent = `${item.nome} (${item.categoria})`;
+                    faltaEstoqueEl.appendChild(faltaItemEl);
+                    itensEmFalta++;
+                }
+            });
+
+            // Mostra ou esconde a caixa de "em falta"
+            containerFaltaEstoque.style.display = itensEmFalta > 0 ? 'block' : 'none';
+        }
+
+        function renderProducao() {
+            const listaProducaoEl = document.getElementById('lista-producao');
+            const precisaProduzirEl = document.getElementById('precisa-produzir');
+            const containerPrecisaProduzir = document.getElementById('container-precisa-produzir');
+
+            listaProducaoEl.innerHTML = '';
+            precisaProduzirEl.innerHTML = '';
+            let itensAPraduzir = 0;
+
+            producao.forEach(item => {
+                 const itemEl = document.createElement('div');
+                itemEl.className = 'item';
+                itemEl.innerHTML = `
+                    <span>${item.nome}</span>
+                    <span class="item-quantity" style="grid-column: span 2;">${item.quantidade}</span>
+                    <div class="item-controls">
+                        <button class="btn-add" onclick="updateQuantity('producao', ${item.id}, 1)">+</button>
+                        <button class="btn-remove" onclick="updateQuantity('producao', ${item.id}, -1)">-</button>
+                         <button class="btn-remove" style="background-color: #888;" onclick="deleteItem('producao', ${item.id})">x</button>
+                    </div>
+                `;
+                listaProducaoEl.appendChild(itemEl);
+
+                if (item.quantidade === 0) {
+                    const produzirItemEl = document.createElement('li');
+                    produzirItemEl.textContent = item.nome;
+                    precisaProduzirEl.appendChild(produzirItemEl);
+                    itensAPraduzir++;
+                }
+            });
+            containerPrecisaProduzir.style.display = itensAPraduzir > 0 ? 'block' : 'none';
+        }
+
+        function renderChecklist() {
+            const checklistEl = document.getElementById('lista-checklist');
+            checklistEl.innerHTML = '';
+
+            if (estoque.length === 0 && producao.length === 0) {
+                checklistEl.innerHTML = '<p>Nenhum item no estoque ou na produção para checar.</p>';
+                return;
+            }
+
+            if (estoque.length > 0) {
+                const tituloEstoque = document.createElement('h3');
+                tituloEstoque.textContent = 'Itens de Estoque';
+                checklistEl.appendChild(tituloEstoque);
+                estoque.forEach(item => {
+                    const checkItem = document.createElement('div');
+                    checkItem.className = 'checklist-item';
+                    checkItem.innerHTML = `
+                        <label>
+                           <input type="checkbox" ${item.quantidade > 0 ? 'checked' : ''}>
+                           ${item.nome}
+                        </label>
+                        <span>${item.quantidade > 0 ? 'OK' : 'EM FALTA'}</span>
+                    `;
+                    checklistEl.appendChild(checkItem);
+                });
+            }
+
+            if (producao.length > 0) {
+                const tituloProducao = document.createElement('h3');
+                tituloProducao.textContent = 'Itens de Produção';
+                checklistEl.appendChild(tituloProducao);
+                producao.forEach(item => {
+                    const checkItem = document.createElement('div');
+                    checkItem.className = 'checklist-item';
+                    checkItem.innerHTML = `
+                        <label>
+                           <input type="checkbox" ${item.quantidade > 0 ? 'checked' : ''}>
+                           ${item.nome}
+                        </label>
+                        <span>${item.quantidade > 0 ? 'OK' : 'PRODUZIR'}</span>
+                    `;
+                    checklistEl.appendChild(checkItem);
+                });
+            }
+        }
+
+        // --- PERSISTÊNCIA DE DADOS (LocalStorage) ---
+
+        function saveData() {
+            localStorage.setItem('sushiEstoque', JSON.stringify(estoque));
+            localStorage.setItem('sushiProducao', JSON.stringify(producao));
+        }
+
+        function loadData() {
+            const storedEstoque = localStorage.getItem('sushiEstoque');
+            const storedProducao = localStorage.getItem('sushiProducao');
+
+            if (storedEstoque) {
+                estoque = JSON.parse(storedEstoque);
+            }
+            if (storedProducao) {
+                producao = JSON.parse(storedProducao);
+            }
+        }
+        
+        // --- INICIALIZAÇÃO ---
+        // Quando a página carregar, carregue os dados e renderize as listas.
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            renderEstoque();
+            renderProducao();
+        });
+
+    </script>
+</body>
+</html>
